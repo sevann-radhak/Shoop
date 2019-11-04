@@ -1,16 +1,13 @@
 ﻿namespace Shoop.Web.Data.Entities
 {
     using System;
-    using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
-    using System.Linq;
-    using System.Threading.Tasks;
 
-    public class Product
+    public class Product : IEntity
     {
         public int Id { get; set; }
 
-        [Required(ErrorMessage ="The field {0} is required")]
+        [Required(ErrorMessage = "The field {0} is required")]
         [MaxLength(60, ErrorMessage = "The field {0} only can contain {1} characters length")]
         public string Name { get; set; }
 
@@ -31,5 +28,9 @@
 
         [DisplayFormat(DataFormatString = "{0:N2}", ApplyFormatInEditMode = false)]
         public double Stock { get; set; }
+
+
+        //[Required(ErrorMessage = "The field {0} is required")]
+        public User User { get; set; }
     }
 }

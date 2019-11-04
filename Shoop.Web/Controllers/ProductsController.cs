@@ -1,39 +1,38 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using Shoop.Web.Data;
-using Shoop.Web.Data.Entities;
-
-namespace Shoop.Web.Controllers
+﻿namespace Shoop.Web.Controllers
 {
+    using System.Threading.Tasks;
+    using Microsoft.AspNetCore.Mvc;
+    using Microsoft.EntityFrameworkCore;
+    using Data;
+    using Data.Entities;
+    using Helpers;
+
     public class ProductsController : Controller
     {
-        public IRepository repository { get; }
+        private readonly IProductRepository productRepository;
+        private readonly IUserHelper userHelper;
 
-        public ProductsController(IRepository repository)
+        public ProductsController(IProductRepository productRepository, IUserHelper userHelper)
         {
-            this.repository = repository;
+            this.productRepository = productRepository;
+            this.userHelper = userHelper;
         }
 
         // GET: Products
         public IActionResult Index()
         {
-            return View(this.repository.GetProducts());
+            return View(this.productRepository.GetAll());
         }
 
         // GET: Products/Details/5
-        public IActionResult Details(int? id)
+        public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
             {
                 return NotFound();
             }
 
-            var product = this.repository.GetProduct(id.Value);
+            var product = await this.productRepository.GetByIdAsync(id.Value);
 
             if (product == null)
             {
@@ -56,8 +55,12 @@ namespace Shoop.Web.Controllers
         {
             if (ModelState.IsValid)
             {
-                this.repository.AddProduct(product);
-                await this.repository.SaveAllAsync();
+                // Assign the User
+                //TODO: Change for the logged user
+                product.User = await this.userHelper.GetUserByEmailAsync("sevann.radhak@gmail.com");
+
+                await this.productRepository.CreateAsync(product);
+                //await this.productRepository.SaveAllAsync();
 
                 return RedirectToAction(nameof(Index));
             }
@@ -66,14 +69,14 @@ namespace Shoop.Web.Controllers
         }
 
         // GET: Products/Edit/5
-        public IActionResult Edit(int? id)
+        public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
             {
                 return NotFound();
             }
 
-            var product = this.repository.GetProduct(id.Value);
+            var product = await this.productRepository.GetByIdAsync(id.Value);
 
             if (product == null)
             {
@@ -94,12 +97,15 @@ namespace Shoop.Web.Controllers
             {
                 try
                 {
-                    this.repository.UpdateProduct(product);
-                    await this.repository.SaveAllAsync();
+                    //TODO: Change for the logged user
+                    product.User = await this.userHelper.GetUserByEmailAsync("sevann.radhak@gmail.com");
+
+                    await this.productRepository.UpdateAsync(product);
+                    //await this.repository.SaveAllAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!this.repository.ProductExists(product.Id))
+                    if (!await this.productRepository.ExistAsync(product.Id))
                     {
                         return NotFound();
                     }
@@ -115,14 +121,14 @@ namespace Shoop.Web.Controllers
         }
 
         // GET: Products/Delete/5
-        public IActionResult Delete(int? id)
+        public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
             {
                 return NotFound();
             }
 
-            var product = this.repository.GetProduct(id.Value);
+            var product = await this.productRepository.GetByIdAsync(id.Value);
 
             if (product == null)
             {
@@ -137,15 +143,15 @@ namespace Shoop.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var product = this.repository.GetProduct(id);
+            var product = await this.productRepository.GetByIdAsync(id);
 
-            if(product == null)
+            if (product == null)
             {
                 return NotFound();
             }
 
-            this.repository.RemoveProduct(product);
-            await this.repository.SaveAllAsync();
+            await this.productRepository.DeleteAsync(product);
+            //await this.repository.SaveAllAsync();
 
             return RedirectToAction(nameof(Index));
         }
