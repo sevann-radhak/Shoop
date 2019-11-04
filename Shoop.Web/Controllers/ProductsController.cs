@@ -6,6 +6,9 @@
     using Data;
     using Data.Entities;
     using Helpers;
+    using Models;
+    using System.IO;
+    using System;
 
     public class ProductsController : Controller
     {
@@ -51,10 +54,34 @@
         // POST: Products/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Product product)
+        public async Task<IActionResult> Create(ProductViewModel view)
         {
             if (ModelState.IsValid)
             {
+                //TODO: Validate the name of the file in server. Change for name + DateTime.Now if necesary
+                // Update file to server
+                var path = string.Empty;
+
+                if (view.ImageFile != null && view.ImageFile.Length > 0)
+                {
+                    // Construct the path to upload file in server
+                    path = Path.Combine(
+                        Directory.GetCurrentDirectory(),
+                        "wwwroot\\images\\Products",
+                        view.ImageFile.FileName);
+
+                    // Upload the file in server with path
+                    using (var stream = new FileStream(path, FileMode.Create))
+                    {
+                        await view.ImageFile.CopyToAsync(stream);
+                    }
+
+                    path = $"~/images/Products/{view.ImageFile.FileName}";
+                }
+
+                Product product = this.ToProduct(view, path);
+
+
                 // Assign the User
                 //TODO: Change for the logged user
                 product.User = await this.userHelper.GetUserByEmailAsync("sevann.radhak@gmail.com");
@@ -65,7 +92,7 @@
                 return RedirectToAction(nameof(Index));
             }
 
-            return View(product);
+            return View(view);
         }
 
         // GET: Products/Edit/5
@@ -83,7 +110,9 @@
                 return NotFound();
             }
 
-            return View(product);
+            ProductViewModel view = this.ToProductViewModel(product);
+
+            return View(view);
         }
 
         // POST: Products/Edit/5
@@ -91,12 +120,36 @@
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Product product)
+        public async Task<IActionResult> Edit(ProductViewModel view)
         {
             if (ModelState.IsValid)
             {
                 try
                 {
+                    //TODO: Validate the name of the file in server. Change for name + DateTime.Now if necesary
+                    // Update file to server
+                    var path = view.ImageUrl;
+
+                    if (view.ImageFile != null && view.ImageFile.Length > 0)
+                    {
+                        // Construct the path to upload file in server
+                        path = Path.Combine(
+                            Directory.GetCurrentDirectory(),
+                            "wwwroot\\images\\Products",
+                            view.ImageFile.FileName);
+
+                        // Upload the file in server with path
+                        using (var stream = new FileStream(path, FileMode.Create))
+                        {
+                            await view.ImageFile.CopyToAsync(stream);
+                        }
+
+                        path = $"~/images/Products/{view.ImageFile.FileName}";
+                    }
+
+                    Product product = this.ToProduct(view, path);
+
+
                     //TODO: Change for the logged user
                     product.User = await this.userHelper.GetUserByEmailAsync("sevann.radhak@gmail.com");
 
@@ -105,7 +158,7 @@
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!await this.productRepository.ExistAsync(product.Id))
+                    if (!await this.productRepository.ExistAsync(view.Id))
                     {
                         return NotFound();
                     }
@@ -117,7 +170,7 @@
                 return RedirectToAction(nameof(Index));
             }
 
-            return View(product);
+            return View(view);
         }
 
         // GET: Products/Delete/5
@@ -154,6 +207,51 @@
             //await this.repository.SaveAllAsync();
 
             return RedirectToAction(nameof(Index));
+        }
+
+        /// <summary>
+        /// Transform an object to Product model 
+        /// Ej: from ProductViewModel object to Product object
+        /// </summary>
+        /// <param name="view"></param>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        private Product ToProduct(ProductViewModel view, string path)
+        {
+            return new Product
+            {
+                Id = view.Id,
+                ImageUrl = path,
+                IsAvaliable = view.IsAvaliable,
+                LastPurchase = view.LastPurchase,
+                LastSale = view.LastSale,
+                Name = view.Name,
+                Price = view.Price,
+                Stock = view.Stock,
+                User = view.User
+            };
+        }
+
+        /// <summary>
+        /// Transform an object to ProductViewModel 
+        /// Ej: from Product object to ProductViewModel object        
+        /// /// </summary>
+        /// <param name="product"></param>
+        /// <returns></returns>
+        private ProductViewModel ToProductViewModel(Product product)
+        {
+            return new ProductViewModel
+            {
+                Id = product.Id,
+                ImageUrl = product.ImageUrl,
+                IsAvaliable = product.IsAvaliable,
+                LastPurchase = product.LastPurchase,
+                LastSale = product.LastSale,
+                Name = product.Name,
+                Price = product.Price,
+                Stock = product.Stock,
+                User = product.User
+            };
         }
     }
 }
